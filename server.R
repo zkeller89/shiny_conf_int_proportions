@@ -1,6 +1,12 @@
 library(shiny)
 
 function(input, output) {
+
+  ####################################################################################
+  #
+  # This is for Confidence Interval UI
+  #
+  ####################################################################################
   
   # List of Reactive Values
   ## nsize, data, z*
@@ -33,7 +39,7 @@ function(input, output) {
 
   # Get our sample
   observeEvent(input$getSample, {
-    rv$data <- rbinom(rv$nsize, 1, input$true_p)
+    rv$data <- rbinom(rv$nsize, 1, input$true_p_ci)
     rv$cf_flag <- F
   })
   
@@ -43,7 +49,7 @@ function(input, output) {
   
   #######################
   # 
-  # eventReactive Objects 
+  # eventReactive Objects that aren't text
   #
   #######################
  
@@ -55,7 +61,7 @@ function(input, output) {
   
   # z-start reactive object
   z_star <- eventReactive(input$getConfInt, {
-    round(qnorm(input$conf_lvl), 4)
+    round(qnorm(1 - ((1 - input$conf_lvl_ci)/2)), 4)
    })
   
   # se-phat calculation
@@ -70,7 +76,7 @@ function(input, output) {
   
   #######################
   # 
-  # Display Text 
+  # Display Text (event reactive objects that are text we'll display)
   #
   #######################
   
@@ -115,7 +121,7 @@ function(input, output) {
   
   #######################
   #
-  # Create Output Objects 
+  # Create Output Objects
   #
   ########################
 
@@ -146,6 +152,15 @@ function(input, output) {
       return()
     } else {
       withMathJax(se_text())
+    } 
+  })
+  
+  # output object split between se-phat and z*/conf int
+  output$break_1 <- renderUI({
+    if (is.null(rv$data)){
+      return()
+    } else {
+      HTML("<hr />")
     } 
   })
   
@@ -181,7 +196,7 @@ function(input, output) {
       if (is.null(rv$data)){
         return()
       } else{
-      ## define plot data
+        ## define plot data
         xlim <- c(0,1)
         ylim <- c(-.1,0.1)
         px <- ci()
@@ -204,6 +219,132 @@ function(input, output) {
       return()
     }
   })
+
+  ####################################################################################
+  #
+  # This is for Confidence Level UI
+  #
+  ####################################################################################
   
+  # List of Reactive Values
+  ## nsize, data, z*
+  rv_cl <- reactiveValues(nsize_cl = 1,
+                          conf_ints_cl = NULL,
+                          cf_flag_cl = F)
+  
+  #######################
+  #  
+  # Event Handling 
+  #
+  #######################  
+  
+  observeEvent(input$add1_cl, {
+    rv_cl$nsize_cl <- as.integer(rv_cl$nsize_cl + 1)
+  })
+  observeEvent(input$add25_cl, {
+    rv_cl$nsize_cl <- as.integer(rv_cl$nsize_cl + 25)
+  })
+  observeEvent(input$add100_cl, {
+    rv_cl$nsize_cl <- as.integer(rv_cl$nsize_cl + 100)
+  })
+  observeEvent(input$reset_cl, {
+    as.integer(rv_cl$nsize_cl <- 1)
+    rv_cl$conf_ints_cl <- NULL
+    rv_cl$cf_flag_cl <- F
+  })
+  
+  observeEvent(input$getConfInt, {
+    rv_cl$cf_flag_cl <- T
+  })
+  
+  # Get our data for confidence intervals
+  observeEvent(input$createConfInts, {
+    num_ints <- input$num_conf_ints_to_create
+    sample_size <- rv_cl$nsize_cl
+    true_p <- input$true_p_cl
+    c_level <- input$conf_lvl_cl
+    
+    cl_data <- matrix(nrow = num_ints, ncol=sample_size)
+    
+    for (i in 1:num_ints){
+      temp.samp <- rbinom(sample_size, 1, true_p)
+      cl_data[i,] <- temp.samp
+    }
+    
+    phats <- rowMeans(cl_data)
+    
+    cis <- phats + matrix(rep(c(0,-1,1), each = num_ints), nrow = num_ints, ncol=3) * qnorm(1 - ((1 - c_level)/2)) * sqrt((phats * (1-phats)) / sample_size)
+    cis <- data.frame(cis)
+    names(cis) <- c("phat", "lower", "upper")
+    cis$tp_flag <- true_p >= cis$lower & true_p <= cis$upper
+    
+    rv_cl$conf_ints_cl <- cis
+    rv$cf_flag_cl <- T
+  })
+  
+  
+  #######################
+  # 
+  # eventReactive Objects 
+  #
+  #######################
+  
+  ci_in_out <- eventReactive(input$createConfInts, {
+    in_out <- rv_cl$conf_ints_cl$tp_flag
+    c(sum(in_out), sum(!in_out))
+  })
+  
+  #######################
+  # 
+  # Display Text 
+  #
+  #######################
+  
+  output$cl_text <- renderText({
+    if (is.null(rv_cl$conf_ints_cl)){
+      return()      
+    } else {
+      paste("We see that ",
+            ci_in_out()[1],
+            ifelse(ci_in_out()[1]==1, " of our confidence intervals contains the true proportion of "," of our confidence intervals contain the true proportion of "),
+            input$true_p_cl,
+            ", while ",
+            ci_in_out()[2],
+            ifelse(ci_in_out()[2]==1, " of our confidence intervals does not contain the true proportion of "," of our confidence intervals do not contain the true proportion of "),
+            input$true_p_cl,
+            ". Thus we see that ",
+            ci_in_out()[1]/sum(ci_in_out()) * 100,
+            "% of our intervals contain the true proportion. We expected ",
+            input$conf_lvl_cl * 100,
+            "%", sep="")
+    }
+
+  })
+  
+  #######################
+  #
+  # Create Output Objects 
+  #
+  ########################
+  
+  # output object to show n-size
+  output$sample_size_text_cl <- renderText(rv_cl$nsize_cl)
+  
+  # ouput object for graphs
+  output$c_int_plot <- renderPlot({
+      if (is.null(rv_cl$conf_ints_cl)){
+        return()
+      } else{
+      library(ggplot2)
+      ggplot() + geom_errorbar(data=rv_cl$conf_ints_cl, mapping=aes(x = 1:input$num_conf_ints_to_create, ymin=lower, ymax=upper),
+                               color= ifelse(rv_cl$conf_ints_cl$tp_flag, "blue", "red")) + 
+        ylim(c(0,1)) + 
+        coord_flip() + 
+        scale_x_discrete(breaks=NULL) + 
+        xlab("") + 
+        theme(legend.position="none") +
+        geom_hline(aes(yintercept=input$true_p_cl))
+    }
+  })
 
 }
