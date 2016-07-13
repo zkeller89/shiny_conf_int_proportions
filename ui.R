@@ -33,6 +33,9 @@ fluidPage(
                         font-size:16px;
                         font-weight:bold;
                         width: 100%;}
+                     .nav{
+                        margin-bottom:1em;
+                     }
                     "))
   ),
   

@@ -294,6 +294,10 @@ function(input, output) {
     c(sum(in_out), sum(!in_out))
   })
   
+  num_ints <- eventReactive(input$createConfInts, {
+    input$num_conf_ints_to_create
+  })
+  
   #######################
   # 
   # Display Text 
@@ -313,10 +317,11 @@ function(input, output) {
             ifelse(ci_in_out()[2]==1, " of our confidence intervals does not contain the true proportion of "," of our confidence intervals do not contain the true proportion of "),
             input$true_p_cl,
             ". Thus we see that ",
-            ci_in_out()[1]/sum(ci_in_out()) * 100,
+            round(ci_in_out()[1]/sum(ci_in_out()) * 100,2),
             "% of our intervals contain the true proportion. We expected ",
-            input$conf_lvl_cl * 100,
-            "%", sep="")
+            round(input$conf_lvl_cl * 100,2),
+            "%",
+            sep="")
     }
 
   })
@@ -336,7 +341,7 @@ function(input, output) {
         return()
       } else{
       library(ggplot2)
-      ggplot() + geom_errorbar(data=rv_cl$conf_ints_cl, mapping=aes(x = 1:input$num_conf_ints_to_create, ymin=lower, ymax=upper),
+      ggplot() + geom_errorbar(data=rv_cl$conf_ints_cl, mapping=aes(x = 1:num_ints(), ymin=lower, ymax=upper),
                                color= ifelse(rv_cl$conf_ints_cl$tp_flag, "blue", "red")) + 
         ylim(c(0,1)) + 
         coord_flip() + 
