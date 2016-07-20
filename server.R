@@ -22,30 +22,17 @@ function(input, output) {
   #
   #######################
 
-  observeEvent(input$add1, {
-    rv$nsize <- as.integer(rv$nsize + 1)
-  })
-  observeEvent(input$add25, {
-    rv$nsize <- as.integer(rv$nsize + 25)
-  })
-  observeEvent(input$add100, {
-    rv$nsize <- as.integer(rv$nsize + 100)
-  })
-  observeEvent(input$reset, {
-    as.integer(rv$nsize <- 1)
-    rv$data <- NULL
-    rv$cf_flag <- F
-  })
-
+  
   # Get our sample
   observeEvent(input$getSample, {
-    rv$data <- rbinom(rv$nsize, 1, input$true_p_ci)
+    rv$data <- rbinom(input$sample_size, 1, input$true_p_ci)
     rv$cf_flag <- F
   })
   
   observeEvent(input$getConfInt, {
     rv$cf_flag <- T
   })
+  
   
   #######################
   # 
@@ -66,7 +53,7 @@ function(input, output) {
   
   # se-phat calculation
   se_phat <- eventReactive(input$getSample, {
-    sqrt( (p_hat() * (1 - p_hat())) / rv$nsize )
+    sqrt( (p_hat() * (1 - p_hat())) / input$sample_size )
   })
   
   # confidence interval calculation
@@ -85,7 +72,7 @@ function(input, output) {
     sprintf("Standard Error of \\(\\hat{p} = \\text{s.e.}(\\hat{p}) =  \\sqrt{\\frac{(%.04f)(1-%.04f)}{%.00f}} = %.04f\\)",
             p_hat(),
             p_hat(),
-            rv$nsize,
+            input$sample_size,
             se_phat() )
   })
   
@@ -97,13 +84,13 @@ function(input, output) {
   
   # text to display for z-start
   z_star_text <- eventReactive(input$getConfInt, {
-    sprintf("\\(Z^*\\) Multiplier = %.04f",
+    sprintf("\\(z^*\\) Multiplier = %.04f",
             z_star())
   })
   
   # text for margin of error
   moe_text <- eventReactive(input$getConfInt, {
-    sprintf("Margin of Error \\(= Z^* \\times \\text{s.e.}(\\hat{p}) = %.04f \\times %.04f = %.04f\\)",
+    sprintf("Margin of Error \\(= z^* \\times \\text{s.e.}(\\hat{p}) = %.04f \\times %.04f = %.04f\\)",
             z_star(),
             se_phat(),
             z_star() * se_phat())
@@ -111,7 +98,7 @@ function(input, output) {
   
   # text for confidence interval
   ci_text <- eventReactive(input$getConfInt, {
-    sprintf("Our Interval: \\(\\hat{p}\\pm Z^* \\times \\text{s.e.}(\\hat{p}) = %.04f \\pm %.04f \\times %.04f = ( %.04f, %.04f) \\)",
+    sprintf("Our Interval: \\(\\hat{p}\\pm z^* \\times \\text{s.e.}(\\hat{p}) \\Rightarrow %.04f \\pm %.04f \\times %.04f \\Rightarrow ( %.04f, %.04f) \\)",
             p_hat(),
             z_star(),
             se_phat(),
@@ -126,7 +113,7 @@ function(input, output) {
   ########################
 
   # output object to show n-size
-  output$sample_size_text <- renderText(rv$nsize)
+  output$sample_size_text <- renderText(input$sample_size)
   
   # output object to show p-hat text
   output$p_hat_output <- renderUI({
@@ -198,11 +185,11 @@ function(input, output) {
       } else{
         ## define plot data
         xlim <- c(0,1)
-        ylim <- c(-.1,0.1)
-        px <- ci()
-        py <- c(0,0)
+        ylim <- c(-.1, 0.1)
+        px <- c(ci(), isolate(input$true_p_ci))
+        py <- c(0, 0, 0)
         lx <- px
-        ly <- 0.05
+        ly <- c(0.05, 0.05, 0.075)
   
         ## create basic plot outline
         par(xaxs='i',yaxs='i')
@@ -212,8 +199,9 @@ function(input, output) {
         ## plot elements
         segments(px,py,lx,ly)
         segments(px[2], 0, px[1], 0, col="red", lwd=6)
-        points(px,py,pch=21,xpd=T, cex= 2, bg="grey")
-        text(lx,ly,px,pos=3)
+        points(px,py,pch=21,xpd=T, cex=2, bg="grey")
+        points(isolate(input$true_p_ci), 0, pch=21, xpd=T, cex=2, bg="lightgreen")
+        text(lx,ly,c(as.character(ci()), "True Proportion"),pos=3)
       }
     } else {
       return()

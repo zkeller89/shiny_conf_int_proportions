@@ -36,6 +36,9 @@ fluidPage(
                      .nav{
                         margin-bottom:1em;
                      }
+                     .irs-grid-text{
+                        font-size:13px;
+                     } 
                     "))
   ),
   
@@ -49,7 +52,7 @@ fluidPage(
     #
     #################################
     
-    tabPanel(h4("Confidence Intervals - Proportions"),
+    tabPanel(h4("Calculating a Confidence Interval ~ Proportions"),
              
 
       # Sidebar with a slider input for the number of bins
@@ -60,19 +63,13 @@ fluidPage(
                             min = 0,
                             max = 1,
                             value = 0.5),
-                strong("Current Sample Size: "), strong(textOutput("sample_size_text")),
+                numericInput("sample_size",
+                             "Enter Your Sample Size (>=10)",
+                             value=10,
+                             min=10,
+                             max=5000,
+                             step=1),
                 br(),
-                actionButton(inputId = "add1",
-                             label = "Add 1"),
-                actionButton(inputId = "add25",
-                             label = "Add 25"),
-                actionButton(inputId = "add100",
-                             label = "Add 100"),
-                br(),br(),
-                "Reset Sample Size: ",
-                actionButton(inputId = "reset",
-                             label = "Reset"),
-                br(),br(),
                 actionButton(inputId = "getSample",
                              label = "Get Sample"),
                 br(),br(),
@@ -106,7 +103,7 @@ fluidPage(
     #
     #################################
     
-    tabPanel(h4("Confidence Levels - Proportions"),
+    tabPanel(h4("Understanding the Confidence Level ~ Proportions"),
              sidebarLayout(
                sidebarPanel(
                  sliderInput("true_p_cl",
