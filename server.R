@@ -216,8 +216,7 @@ function(input, output) {
   
   # List of Reactive Values
   ## nsize, data, z*
-  rv_cl <- reactiveValues(nsize_cl = 1,
-                          conf_ints_cl = NULL,
+  rv_cl <- reactiveValues(conf_ints_cl = NULL,
                           cf_flag_cl = F)
   
   #######################
@@ -226,21 +225,6 @@ function(input, output) {
   #
   #######################  
   
-  observeEvent(input$add1_cl, {
-    rv_cl$nsize_cl <- as.integer(rv_cl$nsize_cl + 1)
-  })
-  observeEvent(input$add25_cl, {
-    rv_cl$nsize_cl <- as.integer(rv_cl$nsize_cl + 25)
-  })
-  observeEvent(input$add100_cl, {
-    rv_cl$nsize_cl <- as.integer(rv_cl$nsize_cl + 100)
-  })
-  observeEvent(input$reset_cl, {
-    as.integer(rv_cl$nsize_cl <- 1)
-    rv_cl$conf_ints_cl <- NULL
-    rv_cl$cf_flag_cl <- F
-  })
-  
   observeEvent(input$getConfInt, {
     rv_cl$cf_flag_cl <- T
   })
@@ -248,7 +232,7 @@ function(input, output) {
   # Get our data for confidence intervals
   observeEvent(input$createConfInts, {
     num_ints <- input$num_conf_ints_to_create
-    sample_size <- rv_cl$nsize_cl
+    sample_size <- input$sample_size_cl
     true_p <- input$true_p_cl
     c_level <- input$conf_lvl_cl
     
@@ -296,20 +280,22 @@ function(input, output) {
     if (is.null(rv_cl$conf_ints_cl)){
       return()      
     } else {
-      paste("We see that ",
-            ci_in_out()[1],
-            ifelse(ci_in_out()[1]==1, " of our confidence intervals contains the true proportion of "," of our confidence intervals contain the true proportion of "),
-            input$true_p_cl,
-            ", while ",
-            ci_in_out()[2],
-            ifelse(ci_in_out()[2]==1, " of our confidence intervals does not contain the true proportion of "," of our confidence intervals do not contain the true proportion of "),
-            input$true_p_cl,
-            ". Thus we see that ",
-            round(ci_in_out()[1]/sum(ci_in_out()) * 100,2),
-            "% of our intervals contain the true proportion. We expected ",
-            round(input$conf_lvl_cl * 100,2),
-            "%",
-            sep="")
+      paste("We see that",
+            strong(ci_in_out()[1]),
+            "of our",
+            strong(sum(ci_in_out())),
+            "generated confidence intervals",
+            strong(paste("(",round(ci_in_out()[1]/sum(ci_in_out()),4) * 100, "%)", sep="")),
+            "did contain the true propportion of",
+            strong(isolate(input$true_p_cl)),
+            "while ",
+            strong(ci_in_out()[2]),
+            "did not. With a ",
+            strong(paste(round(input$conf_lvl_cl,4) * 100, "%", sep="")),
+            "confidence level, we would expect (in the long run) about",
+            strong(paste(round(input$conf_lvl_cl,4) * 100, "%", sep="")),
+            "of the intervals to contain the true proportion",
+            sep=" ")
     }
 
   })
@@ -320,9 +306,6 @@ function(input, output) {
   #
   ########################
   
-  # output object to show n-size
-  output$sample_size_text_cl <- renderText(rv_cl$nsize_cl)
-  
   # ouput object for graphs
   output$c_int_plot <- renderPlot({
       if (is.null(rv_cl$conf_ints_cl)){
@@ -331,12 +314,13 @@ function(input, output) {
       library(ggplot2)
       ggplot() + geom_errorbar(data=rv_cl$conf_ints_cl, mapping=aes(x = 1:num_ints(), ymin=lower, ymax=upper),
                                color= ifelse(rv_cl$conf_ints_cl$tp_flag, "blue", "red")) + 
-        ylim(c(0,1)) + 
-        coord_flip() + 
-        scale_x_discrete(breaks=NULL) + 
-        xlab("") + 
+        coord_cartesian(ylim = c(0,1)) +
+        scale_x_discrete(breaks=NULL) +
+        scale_y_continuous(breaks = seq(0,1,0.1), minor_break = NULL, limits = c(-.1,1.1)) + 
+        coord_flip() +
+        xlab("") +
         theme(legend.position="none") +
-        geom_hline(aes(yintercept=input$true_p_cl))
+        geom_hline(aes(yintercept=isolate(input$true_p_cl)))
     }
   })
 

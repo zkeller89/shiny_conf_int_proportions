@@ -37,8 +37,11 @@ fluidPage(
                         margin-bottom:1em;
                      }
                      .irs-grid-text{
-                        font-size:13px;
-                     } 
+                        font-size:12px;
+                     }
+                     #cl_text{
+                        font-size:16px;
+                     }
                     "))
   ),
   
@@ -60,9 +63,10 @@ fluidPage(
               sidebarPanel(
                 sliderInput("true_p_ci",
                             "True Proportion",
-                            min = 0,
-                            max = 1,
-                            value = 0.5),
+                            min = 0.0001,
+                            max = 0.9999,
+                            value = 0.5,
+                            sep=""),
                 numericInput("sample_size",
                              "Enter Your Sample Size (>=10)",
                              value=10,
@@ -76,8 +80,9 @@ fluidPage(
                 sliderInput("conf_lvl_ci",
                             "Confidence Level",
                             min = .9,
-                            max = 1,
-                            value = 0.95),
+                            max = .9999,
+                            value = 0.95,
+                            sep=""),
                 br(),
                 actionButton(inputId = "getConfInt",
                              label = "Get Confidence Interval")      
@@ -108,29 +113,26 @@ fluidPage(
                sidebarPanel(
                  sliderInput("true_p_cl",
                              "True Proportion",
-                             min = 0,
-                             max = 1,
-                             value = 0.5),
-                 strong("Current Sample Size: "), strong(textOutput("sample_size_text_cl")),
-                 br(),
-                 actionButton(inputId = "add1_cl",
-                              label = "Add 1"),
-                 actionButton(inputId = "add25_cl",
-                              label = "Add 25"),
-                 actionButton(inputId = "add100_cl",
-                              label = "Add 100"),
-                 br(),br(),
-                 "Reset Sample Size: ",
-                 actionButton(inputId = "reset_cl",
-                              label = "Reset"),
+                             min = 0.0001,
+                             max = .9999,
+                             value = 0.5,
+                             sep=""),
+                 helpText("Note: We generally do not know the True Proportion but we get to set the value here to see how well the confidence interval estimation process works"),
+                 numericInput("sample_size_cl",
+                              "Enter Your Sample Size (>=10)",
+                              value=25,
+                              min=25,
+                              max=5000,
+                              step=1),
                  sliderInput("conf_lvl_cl",
-                             "Confidence Level",
-                             min = .9,
-                             max = 1,
-                             value = 0.95),
+                             "What Confidence Level do you want to use?",
+                             min = .90,
+                             max = 0.9999,
+                             value = 0.95,
+                             sep=""),
                  sliderInput("num_conf_ints_to_create",
                              "How Many Confidence Interval Should We Make?",
-                             min = 1,
+                             min = 10,
                              max = 200,
                              value = 100),
                  actionButton(inputId = "createConfInts",
@@ -138,7 +140,7 @@ fluidPage(
                ),
         mainPanel(
           plotOutput("c_int_plot"),
-          textOutput("cl_text")
+          htmlOutput("cl_text")
         )
       )
     )
