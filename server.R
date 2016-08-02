@@ -58,7 +58,14 @@ function(input, output) {
   
   # confidence interval calculation
   ci <- eventReactive(input$getConfInt, {
-    round(p_hat() + c(-1,1) * z_star() * se_phat(), 4)
+    our_ci <- round(p_hat() + c(-1,1) * z_star() * se_phat(), 4)
+    if(our_ci[1] < 0){
+      our_ci[1] = 0
+    }
+    if(our_ci[2] > 1){
+      our_ci[2] = 1
+    }
+    our_ci
   })
   
   #######################
@@ -186,10 +193,12 @@ function(input, output) {
         ## define plot data
         xlim <- c(0,1)
         ylim <- c(-.1, 0.1)
-        px <- c(ci(), isolate(input$true_p_ci))
-        py <- c(0, 0, 0)
-        lx <- px
-        ly <- c(0.05, 0.05, 0.075)
+        px <- ci()
+        py <- c(0, 0)
+        lx <- c(px)
+        ly <- c(0.05, 0.05)
+        true_p <- isolate(input$true_p_ci)
+        phat <- p_hat()
   
         ## create basic plot outline
         par(xaxs='i',yaxs='i')
@@ -197,11 +206,16 @@ function(input, output) {
         axis(1, pos = c(0,0))
   
         ## plot elements
-        segments(px,py,lx,ly)
+        segments(px,py,px,ly)
         segments(px[2], 0, px[1], 0, col="red", lwd=6)
+        segments(true_p, 0, true_p, .075)
+        segments(phat, 0, phat, -.05)
         points(px,py,pch=21,xpd=T, cex=2, bg="grey")
-        points(isolate(input$true_p_ci), 0, pch=21, xpd=T, cex=2, bg="lightgreen")
-        text(lx,ly,c(as.character(ci()), "True Proportion"),pos=3)
+        points(true_p, 0, pch=21, xpd=T, cex=2, bg="green")
+        points(p_hat(), 0, pch = 21, xpd = T, cex = 2, bg = "blue")
+        text(lx, ly, ci(), pos=3)
+        text(true_p, .075, "True Proportion", pos=3)
+        text(phat, -0.05, "p-hat", pos=1)
       }
     } else {
       return()
@@ -245,10 +259,15 @@ function(input, output) {
     
     phats <- rowMeans(cl_data)
     
-    cis <- phats + matrix(rep(c(0,-1,1), each = num_ints), nrow = num_ints, ncol=3) * qnorm(1 - ((1 - c_level)/2)) * sqrt((phats * (1-phats)) / sample_size)
+    cis <- phats + matrix(rep(c(0,-1,1), each = num_ints),
+                          nrow = num_ints, ncol=3) * qnorm(1 - ((1 - c_level)/2)) * sqrt((phats * (1-phats)) / sample_size)
     cis <- data.frame(cis)
     names(cis) <- c("phat", "lower", "upper")
     cis$tp_flag <- true_p >= cis$lower & true_p <= cis$upper
+    
+    # Edit upper and lower bounds so they're between 0 and 1
+    cis$lower[cis$lower < 0] = 0
+    cis$upper[cis$upper > 1] = 1
     
     rv_cl$conf_ints_cl <- cis
     rv$cf_flag_cl <- T
@@ -291,9 +310,9 @@ function(input, output) {
             "while ",
             strong(ci_in_out()[2]),
             "did not. With a ",
-            strong(paste(round(input$conf_lvl_cl,4) * 100, "%", sep="")),
+            strong(paste(round(isolate(input$conf_lvl_cl),4) * 100, "%", sep="")),
             "confidence level, we would expect (in the long run) about",
-            strong(paste(round(input$conf_lvl_cl,4) * 100, "%", sep="")),
+            strong(paste(round(isolate(input$conf_lvl_cl),4) * 100, "%", sep="")),
             "of the intervals to contain the true proportion",
             sep=" ")
     }
