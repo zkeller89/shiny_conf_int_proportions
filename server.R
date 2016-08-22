@@ -4,18 +4,15 @@ function(input, output) {
 
   ####################################################################################
   #
-  # This is for Confidence Interval UI
+  # This is for Confidence Interval for proportions
   #
   ####################################################################################
   
   # List of Reactive Values
   ## nsize, data, z*
-  rv <- reactiveValues(nsize = 1,
-                       data = NULL,
+  rv <- reactiveValues(data = NULL,
                        cf_flag = F)
   
-  p_hat <- reactive({mean(rv$data)})
- 
   #######################
   #  
   # Event Handling 
@@ -119,9 +116,6 @@ function(input, output) {
   #
   ########################
 
-  # output object to show n-size
-  output$sample_size_text <- renderText(input$sample_size)
-  
   # output object to show p-hat text
   output$p_hat_output <- renderUI({
     if (is.null(rv$data)){
@@ -224,7 +218,7 @@ function(input, output) {
 
   ####################################################################################
   #
-  # This is for Confidence Level UI
+  # This is for Confidence Level
   #
   ####################################################################################
   
@@ -342,5 +336,229 @@ function(input, output) {
         geom_hline(aes(yintercept=isolate(input$true_p_cl)))
     }
   })
-
+  
+  ####################################################################################
+  #
+  # This is for Confidence Interval for Population Means
+  #
+  ####################################################################################
+  
+  # First create our reactive values
+  rv_mn_ci <- reactiveValues(data = NULL,
+                       cf_flag = F)
+  
+  # Get our sample
+  observeEvent(input$getSample_mn, {
+    # Check if Normal (1) or Uniform (2), elseif for further distributions
+    if (input$ci_mean_pop_dist == 1){
+      rv_mn_ci$data <- rnorm(input$sample_size_mn_ci, input$mu_ci, input$sd_ci)      
+    } else if (input$ci_mean_pop_dist == 2){
+      rv_mn_ci$data <- runif(input$sample_size_mn_ci, input$a_ci, input$b_ci)
+    }
+    
+    rv_mn_ci$cf_flag <- F
+  })
+  
+  observeEvent(input$getConfInt_mn, {
+    rv_mn_ci$cf_flag <- T
+  })
+  
+  #######################
+  # 
+  # eventReactive Objects that aren't text
+  #
+  #######################
+  
+  # degrees of fredom
+  df <- eventReactive(input$getSample_mn, {
+    input$sample_size_mn_ci - 1
+  })
+  # get x-bar after get sample
+  x_bar <- eventReactive(input$getSample_mn, {
+    round(mean(rv_mn_ci$data), 4)
+  })
+  
+  # Get Sample Standard deviation of data
+  samp_sd <- eventReactive(input$getSample_mn, {
+    round(sd(rv_mn_ci$data), 4)
+  })
+  
+  # z-star reactive object (in case sigma known)
+  z_star_mn <- eventReactive(input$getConfInt_mn, {
+    round(qnorm(1 - ((1 - input$conf_lvl_mn_ci)/2)), 4)
+  })
+  
+  # t-star (sigma unknown)
+  t_star_mn <- eventReactive(input$getConfInt_mn, {
+    round(qt(1 - ((1 - input$conf_lvl_mn_ci)/2), df()), 4)
+  })
+  
+  # se-xbar calculation
+  se_xbar_ci <- eventReactive(input$getSample_mn, {
+    sd(rv_mn_ci$data)  / sqrt(input$sample_size_mn_ci)
+  })
+  
+  # confidence interval calculation
+  ci_mn <- eventReactive(input$getConfInt_mn, {
+    if (input$sd_known_ci == 1){
+      our_ci <- round(x_bar() + c(-1,1) * z_star_mn() * se_xbar_ci(), 4)
+      our_ci      
+    } else {
+      our_ci <- round(x_bar() + c(-1,1) * t_star_mn() * se_xbar_ci(), 4)
+      our_ci
+    }
+  })
+  
+  #######################
+  # 
+  # Display Text (event reactive objects that are text we'll display) for population means
+  #
+  #######################
+  
+  # text to display for standard error p-hat
+  se_text_mn <- eventReactive(input$getSample_mn, {
+    sprintf("Standard Error of \\(\\bar{x} = \\text{s.e.}(\\bar{x}) =  \\frac{%.04f}{\\sqrt{%.00f}} = %.04f\\)",
+            sd(rv_mn_ci$data),
+            input$sample_size_mn_ci,
+            se_xbar_ci())
+  })
+  
+  # text to display for x-bar
+  x_bar_text_mn <- eventReactive(input$getSample_mn, {
+    sprintf("Sample Mean \\((\\bar{x}): %.04f\\)",
+            x_bar())
+  })
+  
+  # text to display for s (sample std dev)
+  samp_sd_text_mn <- eventReactive(input$getSample_mn, {
+    sprintf("Sample Standard Deviation,  s: %.04f ",
+            samp_sd())
+  })
+  
+  # text to display for z-start
+  z_star_text_mn <- eventReactive(input$getConfInt_mn, {
+    sprintf("\\(z^*\\) Multiplier = %.04f",
+            z_star_mn())
+  })
+  
+  # text to display for z-start
+  t_star_text_mn <- eventReactive(input$getConfInt_mn, {
+    sprintf("\\(t^*\\) Multiplier = %.04f",
+            t_star_mn())
+  })
+  
+  # text for margin of error
+  moe_text_mn <- eventReactive(input$getConfInt_mn, {
+    if (input$sd_known_ci == 1){
+      sprintf("Margin of Error \\(= z^* \\times \\text{s.e.}(\\bar{x}) = %.04f \\times %.04f = %.04f\\)",
+              z_star_mn(),
+              se_xbar_ci(),
+              z_star_mn() * se_xbar_ci())
+    } else {
+      sprintf("Margin of Error \\(= t^* \\times \\text{s.e.}(\\bar{x}) = %.04f \\times %.04f = %.04f\\)",
+              t_star_mn(),
+              se_xbar_ci(),
+              t_star_mn() * se_xbar_ci())
+    }
+  })
+  
+  # text for confidence interval
+  ci_text_mn <- eventReactive(input$getConfInt_mn, {
+    if (input$sd_known_ci == 1){
+      sprintf("Our Interval: \\(\\bar{x}\\pm z^* \\times \\text{s.e.}(\\bar{x}) \\Rightarrow %.04f \\pm %.04f \\times %.04f \\Rightarrow ( %.04f, %.04f) \\)",
+              x_bar(),
+              z_star_mn(),
+              se_xbar_ci(),
+              ci_mn()[1],
+              ci_mn()[2] )
+    } else {
+      sprintf("Our Interval: \\(\\bar{x}\\pm t^* \\times \\text{s.e.}(\\bar{x}) \\Rightarrow %.04f \\pm %.04f \\times %.04f \\Rightarrow ( %.04f, %.04f) \\)",
+              x_bar(),
+              t_star_mn(),
+              se_xbar_ci(),
+              ci_mn()[1],
+              ci_mn()[2] )
+    }
+  })
+  
+  #######################
+  #
+  # Create Output Objects
+  #
+  ########################
+  
+  # output object to show p-hat text
+  output$x_bar_output <- renderUI({
+    if (is.null(rv_mn_ci$data)){
+      return()
+    } else{
+      withMathJax(x_bar_text_mn())
+    }
+  })
+  
+  output$samp_sd_output <- renderUI({
+    if (is.null(rv_mn_ci$data)){
+      return()
+      } else {
+        withMathJax(samp_sd_text_mn())
+      }
+  })
+  
+  # output object to show z-star
+  output$zt_star_output_mn <- renderUI({
+    if (rv_mn_ci$cf_flag){
+      if (isolate(input$sd_known_ci) == 1){
+        withMathJax(z_star_text_mn())
+      } else {
+        withMathJax(t_star_text_mn())
+      }
+    } else{
+      return()
+    }
+  })
+  
+  # output object to show std error formula
+  output$se_formula_mn <- renderUI({
+    if (is.null(rv_mn_ci$data)){
+      return()
+    } else {
+      withMathJax(se_text_mn())
+    } 
+  })
+  
+  # output object split between se-phat and z*/conf int
+  output$break_1_mn <- renderUI({
+    if (is.null(rv_mn_ci$data)){
+      return()
+    } else {
+      HTML("<hr />")
+    } 
+  })
+  
+  # output object to show margin of error
+  output$moe_output_mn <- renderUI({
+    if (rv_mn_ci$cf_flag) {
+      if (is.null(rv_mn_ci$data)){
+        "Please Create a Sample"
+      } else{
+        withMathJax(moe_text_mn())
+      }
+    } else {
+      return()
+    }
+  })
+  
+  # output object to show confidence interval calculation
+  output$ci_output_mn <- renderUI({
+    if(rv_mn_ci$cf_flag){
+      if (is.null(rv_mn_ci$data)){
+        return()
+      } else {
+        withMathJax(ci_text_mn())
+      }
+    } else {
+      return()
+    }
+  })
+   
 }

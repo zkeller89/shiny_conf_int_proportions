@@ -9,7 +9,7 @@ fluidPage(
   #
   ##################################
   tags$head(
-    tags$style(HTML("#getSample{
+    tags$style(HTML("#getSample, #getSample_mn{
                         background-color: #0099cc;
                         color:white;
                         padding: 15px 32px;
@@ -17,7 +17,7 @@ fluidPage(
                         font-size:16px;
                         font-weight:bold;
                         width: 100%;}
-                     #getConfInt{
+                     #getConfInt, #getConfInt_mn{
                         background-color: #660000;
                         color:white;
                         padding: 15px 32px;
@@ -25,7 +25,7 @@ fluidPage(
                         font-size:16px;
                         font-weight:bold;
                         width: 100%;}
-                     #createConfInts{
+                     #createConfInts, #createConfInts_mn{
                         background-color: #660000;
                         color:white;
                         padding: 15px 32px;
@@ -147,6 +147,60 @@ fluidPage(
           htmlOutput("cl_text")
         )
       )
+    ),
+    tabPanel(h4("Calculating Confidence Interval ~ Means"),
+             sidebarLayout(
+               sidebarPanel(selectInput("ci_mean_pop_dist",
+                                        "Choose the population Distribution",
+                                        choices = list("Normal" = 1, "Uniform" = 2),
+                                        selected = 1),
+                            conditionalPanel(condition = "input.ci_mean_pop_dist == 1",
+                                             numericInput("mu_ci", 
+                                                          "Enter Population Mean",
+                                                          0),
+                                             numericInput("sd_ci",
+                                                          "Enter Population Standard Deviation",
+                                                          1)),
+                            conditionalPanel(condition = "input.ci_mean_pop_dist == 2",
+                                             numericInput("a_ci",
+                                                          "Enter Lower Bound for Distribution",
+                                                          0),
+                                             numericInput("b_ci",
+                                                          "Enter Upper Bound for Distribution",
+                                                          1)),
+                            selectInput("sd_known_ci",
+                                        strong("Do we know our Population Standard Deviation?"),
+                                        choices = list("Yes" = 1, "No" = 0),
+                                        selected = 0),
+                            numericInput("sample_size_mn_ci",
+                                         "Enter Your Sample Size (>=25)",
+                                         35),
+                            actionButton(inputId = "getSample_mn",
+                                         label = "Get Sample"),
+                            sliderInput("conf_lvl_mn_ci",
+                                        "Confidence Level",
+                                        min = .9,
+                                        max = .99,
+                                        value = 0.95,
+                                        sep="",
+                                        step=0.01),
+                            actionButton(inputId = "getConfInt_mn",
+                                         label = "Get Confidence Interval")  
+               ),
+               mainPanel(
+                 helpText("Note: This exercise assumes no knowledge of the underlying population distribution (i.e., if it is normal or uniform). The only exception is regarding the population standard deviation in the event you selected 'Yes' in that respective dropdown."),
+                 withMathJax(),
+                 h4(uiOutput("x_bar_output")),
+                 h4(uiOutput("samp_sd_output")),
+                 h4(uiOutput("se_formula_mn")),
+                 uiOutput("break_1_mn"),
+                 h4(uiOutput("zt_star_output_mn")),
+                 h4(uiOutput("moe_output_mn")),
+                 h4(uiOutput("ci_output_mn"))#,
+                 # plotOutput("ciPlot_output_")
+                 
+               )
+             )
     )
   )
 )
