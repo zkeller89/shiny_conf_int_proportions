@@ -196,8 +196,8 @@ fluidPage(
                  uiOutput("break_1_mn"),
                  h4(uiOutput("zt_star_output_mn")),
                  h4(uiOutput("moe_output_mn")),
-                 h4(uiOutput("ci_output_mn"))#,
-                 # plotOutput("ciPlot_output_")
+                 h4(uiOutput("ci_output_mn")),
+                 plotOutput("ciPlot_output_mn")
                  
                )
              )

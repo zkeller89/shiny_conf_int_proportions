@@ -395,7 +395,15 @@ function(input, output) {
   
   # se-xbar calculation
   se_xbar_ci <- eventReactive(input$getSample_mn, {
-    sd(rv_mn_ci$data)  / sqrt(input$sample_size_mn_ci)
+    if (input$sd_known_ci == 1){
+      if (input$ci_mean_pop_dist == 1){
+        input$sd_ci / sqrt(input$sample_size_mn_ci)
+      } else if (input$ci_mean_pop_dist == 2) {
+        sqrt(abs(input$b_ci - input$a_ci)^2 / 12) / sqrt(input$sample_size_mn_ci)
+      }
+    } else{
+        sd(rv_mn_ci$data)  / sqrt(input$sample_size_mn_ci)
+    }
   })
   
   # confidence interval calculation
@@ -561,4 +569,47 @@ function(input, output) {
     }
   })
    
+  # output plot to show our interval
+  output$ciPlot_output_mn <- renderPlot({
+    if (rv_mn_ci$cf_flag){
+      if (is.null(rv_mn_ci$data)){
+        return()
+      } else{
+        ## define plot data
+        len_ci <- abs(ci_mn()[2] - ci_mn()[1])
+        xlim <- c(ci_mn()[1] - 0.25 * len_ci, ci_mn()[2] + 0.25 * len_ci)
+        ylim <- c(-.1, 0.1)
+        px <- ci_mn()
+        py <- c(0, 0)
+        lx <- c(px)
+        ly <- c(0.05, 0.05)
+        true_mn <- if (input$ci_mean_pop_dist == 1) {
+          isolate(input$mu_ci)
+        } else if (input$ci_mean_pop_dist == 2) {
+          (isolate(input$a_ci) + isolate(input$b_ci)) / 2
+        }
+        
+        xbar <- x_bar()
+        
+        ## create basic plot outline
+        par(xaxs='i',yaxs='i')
+        plot(NA,xlim=xlim,ylim=ylim,axes=F,ann=F)
+        axis(1, pos = c(0,0))
+        
+        ## plot elements
+        segments(px,py,px,ly)
+        segments(px[2], 0, px[1], 0, col="red", lwd=6)
+        segments(true_mn, 0, true_mn, .075)
+        segments(xbar, 0, xbar, -.05)
+        points(px,py,pch=21,xpd=T, cex=2, bg="grey")
+        points(true_mn, 0, pch=21, xpd=T, cex=2, bg="green")
+        points(xbar, 0, pch = 21, xpd = T, cex = 2, bg = "blue")
+        text(lx, ly, ci_mn(), pos=3)
+        text(true_mn, .075, "True Mean", pos=3)
+        text(xbar, -0.05, "x-bar", pos=1)
+      }
+    } else {
+      return()
+    }
+  })
 }
