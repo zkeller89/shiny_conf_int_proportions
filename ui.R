@@ -159,7 +159,7 @@ fluidPage(
                                                           "Enter Population Mean",
                                                           0),
                                              numericInput("sd_ci",
-                                                          "Enter Population Standard Deviation",
+                                                          "Enter Population Standard Deviation, (Must be positive!)",
                                                           1)),
                             conditionalPanel(condition = "input.ci_mean_pop_dist == 2",
                                              numericInput("a_ci",

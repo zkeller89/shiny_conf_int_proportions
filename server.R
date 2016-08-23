@@ -594,7 +594,7 @@ function(input, output) {
         ## create basic plot outline
         par(xaxs='i',yaxs='i')
         plot(NA,xlim=xlim,ylim=ylim,axes=F,ann=F)
-        axis(1, pos = c(0,0))
+        axis(1, at = xlim, pos = c(0,0))
         
         ## plot elements
         segments(px,py,px,ly)
